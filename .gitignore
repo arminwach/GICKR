@@ -1,0 +1,16 @@
+# Local executables
+*.exe
+/gickr
+/GICKR
+
+# Local configuration and data
+.env
+.env.*
+!.env.example
+*.db
+*.db-shm
+*.db-wal
+
+# Development output
+/tmp/
+/node_modules/
