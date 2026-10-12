@@ -31,7 +31,7 @@ templ PlayerList(players []Player) {
 							type="button"
 							class="rounded-xl px-3 py-2 text-sm font-medium text-slate-400 transition hover:bg-red-500/10 hover:text-red-400 focus:outline-none focus:ring-2 focus:ring-red-400"
 							hx-delete={ fmt.Sprintf("/players/%d", player.ID) }
-							hx-target="#player-list"
+							hx-target="#league-content"
 							hx-swap="outerHTML"
 							hx-confirm="Delete this player?"
 						>
@@ -46,6 +46,82 @@ templ PlayerList(players []Player) {
 
 templ PlayerFormError(message string) {
 	<span class="text-sm font-medium text-red-400">{ message }</span>
+}
+
+templ playerOptions(players []Player) {
+	<option value="">Select player</option>
+	for _, player := range players {
+		<option value={ fmt.Sprintf("%d", player.ID) }>{ player.Name }</option>
+	}
+}
+
+templ MatchFormError(message string) {
+	<p class="text-sm font-medium text-red-400">{ message }</p>
+}
+
+templ MatchFormSuccess(message string) {
+	<p class="text-sm font-medium text-emerald-400">{ message }</p>
+}
+
+templ MatchForm(players []Player) {
+	<section class="mb-8 rounded-3xl border border-slate-800 bg-slate-900/70 p-5 shadow-xl shadow-black/10">
+		<h2 class="text-lg font-bold text-white">Record a match</h2>
+		<p class="mt-1 text-sm text-slate-400">Choose one player per team for singles, or add a second for doubles.</p>
+		if len(players) < 2 {
+			<p class="mt-5 rounded-xl border border-dashed border-slate-700 p-4 text-sm text-slate-400">Add at least two players to record a match.</p>
+		} else {
+			<form
+				class="mt-5 space-y-5"
+				method="POST"
+				action="/matches"
+				hx-post="/matches"
+				hx-target="#match-form-feedback"
+				hx-swap="innerHTML"
+				hx-on::before-request="document.getElementById('match-form-feedback').textContent = ''"
+				hx-on::after-request="if (event.detail.xhr.getResponseHeader('X-Match-Added') === 'true') this.reset()"
+			>
+				<div class="grid gap-4 sm:grid-cols-2">
+					<fieldset class="space-y-3 rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
+						<legend class="px-2 font-bold text-emerald-400">Team 1</legend>
+						<label class="block text-sm font-medium text-slate-300" for="team-1-player-1">Player 1</label>
+						<select id="team-1-player-1" name="team_1_player_1" class="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-3 text-white outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-400/20" required>
+							@playerOptions(players)
+						</select>
+						<label class="block text-sm font-medium text-slate-300" for="team-1-player-2">Player 2 <span class="text-slate-500">(optional)</span></label>
+						<select id="team-1-player-2" name="team_1_player_2" class="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-3 text-white outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-400/20">
+							@playerOptions(players)
+						</select>
+						<label class="block text-sm font-medium text-slate-300" for="team-1-score">Score</label>
+						<input id="team-1-score" name="team_1_score" type="number" min="0" inputmode="numeric" class="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-3 text-white outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-400/20" required/>
+					</fieldset>
+					<fieldset class="space-y-3 rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
+						<legend class="px-2 font-bold text-cyan-400">Team 2</legend>
+						<label class="block text-sm font-medium text-slate-300" for="team-2-player-1">Player 1</label>
+						<select id="team-2-player-1" name="team_2_player_1" class="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-3 text-white outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20" required>
+							@playerOptions(players)
+						</select>
+						<label class="block text-sm font-medium text-slate-300" for="team-2-player-2">Player 2 <span class="text-slate-500">(optional)</span></label>
+						<select id="team-2-player-2" name="team_2_player_2" class="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-3 text-white outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20">
+							@playerOptions(players)
+						</select>
+						<label class="block text-sm font-medium text-slate-300" for="team-2-score">Score</label>
+						<input id="team-2-score" name="team_2_score" type="number" min="0" inputmode="numeric" class="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-3 text-white outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20" required/>
+					</fieldset>
+				</div>
+				<button type="submit" class="w-full rounded-xl bg-white px-5 py-3 font-bold text-slate-950 transition hover:bg-slate-200 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-slate-900">Save match</button>
+				<div id="match-form-feedback" class="min-h-5" role="status" aria-live="polite"></div>
+			</form>
+		}
+	</section>
+}
+
+templ LeagueContent(players []Player) {
+	<div id="league-content">
+		@MatchForm(players)
+		<section>
+			@PlayerList(players)
+		</section>
+	</div>
 }
 
 templ Home(players []Player) {
@@ -73,7 +149,7 @@ templ Home(players []Player) {
 						method="POST"
 						action="/players"
 						hx-post="/players"
-						hx-target="#player-list"
+						hx-target="#league-content"
 						hx-swap="outerHTML"
 						hx-on::before-request="document.getElementById('player-form-error').textContent = ''"
 						hx-on::after-request="if (event.detail.xhr.getResponseHeader('X-Player-Added') === 'true') this.reset()"
@@ -96,9 +172,7 @@ templ Home(players []Player) {
 						<div id="player-form-error" class="mt-2 min-h-5" role="alert" aria-live="polite"></div>
 					</form>
 				</section>
-				<section>
-					@PlayerList(players)
-				</section>
+				@LeagueContent(players)
 			</main>
 		</body>
 	</html>

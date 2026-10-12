@@ -3,6 +3,7 @@ package main
 import (
 	"database/sql"
 	"errors"
+	"fmt"
 	"log"
 	"net/http"
 	"strconv"
@@ -19,6 +20,48 @@ func playerExists(players []Player, name string) bool {
 	}
 
 	return false
+}
+
+func playerFromForm(r *http.Request, players []Player, field string, required bool) (Player, bool, error) {
+	value := strings.TrimSpace(r.FormValue(field))
+	if value == "" {
+		if required {
+			return Player{}, false, fmt.Errorf("select every required player")
+		}
+		return Player{}, false, nil
+	}
+
+	id, err := strconv.ParseInt(value, 10, 64)
+	if err != nil {
+		return Player{}, false, fmt.Errorf("invalid player selection")
+	}
+
+	for _, player := range players {
+		if player.ID == id {
+			return player, true, nil
+		}
+	}
+
+	return Player{}, false, fmt.Errorf("selected player does not exist")
+}
+
+func scoreFromForm(r *http.Request, field string) (int, error) {
+	score, err := strconv.Atoi(strings.TrimSpace(r.FormValue(field)))
+	if err != nil || score < 0 {
+		return 0, fmt.Errorf("enter valid non-negative scores")
+	}
+	return score, nil
+}
+
+func renderMatchFormError(w http.ResponseWriter, r *http.Request, message string) {
+	if r.Header.Get("HX-Request") != "true" {
+		http.Error(w, message, http.StatusUnprocessableEntity)
+		return
+	}
+
+	if err := MatchFormError(message).Render(r.Context(), w); err != nil {
+		log.Printf("render match form error: %v", err)
+	}
 }
 
 func renderPlayerFormError(w http.ResponseWriter, r *http.Request, message string) {
@@ -91,7 +134,7 @@ func main() {
 
 		if r.Header.Get("HX-Request") == "true" {
 			w.Header().Set("X-Player-Added", "true")
-			err := PlayerList(players).Render(r.Context(), w)
+			err := LeagueContent(players).Render(r.Context(), w)
 			if err != nil {
 				http.Error(w, "Could not render player list", http.StatusInternalServerError)
 			}
@@ -124,9 +167,78 @@ func main() {
 			return
 		}
 
-		if err := PlayerList(players).Render(r.Context(), w); err != nil {
+		if err := LeagueContent(players).Render(r.Context(), w); err != nil {
 			http.Error(w, "Could not render player list", http.StatusInternalServerError)
 		}
+	})
+
+	mux.HandleFunc("POST /matches", func(w http.ResponseWriter, r *http.Request) {
+		team1Player1, _, err := playerFromForm(r, players, "team_1_player_1", true)
+		if err != nil {
+			renderMatchFormError(w, r, err.Error())
+			return
+		}
+		team1Player2, hasTeam1Player2, err := playerFromForm(r, players, "team_1_player_2", false)
+		if err != nil {
+			renderMatchFormError(w, r, err.Error())
+			return
+		}
+		team2Player1, _, err := playerFromForm(r, players, "team_2_player_1", true)
+		if err != nil {
+			renderMatchFormError(w, r, err.Error())
+			return
+		}
+		team2Player2, hasTeam2Player2, err := playerFromForm(r, players, "team_2_player_2", false)
+		if err != nil {
+			renderMatchFormError(w, r, err.Error())
+			return
+		}
+
+		team1Score, err := scoreFromForm(r, "team_1_score")
+		if err != nil {
+			renderMatchFormError(w, r, err.Error())
+			return
+		}
+		team2Score, err := scoreFromForm(r, "team_2_score")
+		if err != nil {
+			renderMatchFormError(w, r, err.Error())
+			return
+		}
+
+		match := Match{
+			Team1Players: []Player{team1Player1},
+			Team2Players: []Player{team2Player1},
+			Team1Score:   team1Score,
+			Team2Score:   team2Score,
+		}
+		if hasTeam1Player2 {
+			match.Team1Players = append(match.Team1Players, team1Player2)
+		}
+		if hasTeam2Player2 {
+			match.Team2Players = append(match.Team2Players, team2Player2)
+		}
+
+		match, err = store.addMatch(r.Context(), match)
+		if err != nil {
+			if errors.Is(err, ErrInvalidMatch) {
+				renderMatchFormError(w, r, strings.TrimPrefix(err.Error(), ErrInvalidMatch.Error()+": "))
+				return
+			}
+
+			http.Error(w, "Could not save match", http.StatusInternalServerError)
+			return
+		}
+
+		if r.Header.Get("HX-Request") == "true" {
+			w.Header().Set("X-Match-Added", "true")
+			message := fmt.Sprintf("Match recorded: %d–%d", match.Team1Score, match.Team2Score)
+			if err := MatchFormSuccess(message).Render(r.Context(), w); err != nil {
+				http.Error(w, "Could not render match confirmation", http.StatusInternalServerError)
+			}
+			return
+		}
+
+		http.Redirect(w, r, "/", http.StatusSeeOther)
 	})
 
 	log.Fatal(http.ListenAndServe(":8080", mux))
