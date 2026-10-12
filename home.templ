@@ -3,53 +3,103 @@ package main
 import "fmt"
 
 templ PlayerList(players []Player) {
-	<ul id="player-list">
-		for _, player := range players {
-			<li>
-                { player.Name } — { fmt.Sprintf("%d", player.Rating) }
-                <button
-                    type="button"
-                    hx-delete={ fmt.Sprintf("/players/%d", player.ID) }
-                    hx-target="#player-list"
-                    hx-swap="outerHTML"
-                    hx-confirm="Delete this player?"
-                >
-                    Delete
-                </button>
-            </li>
+	<div id="player-list" class="space-y-3">
+		<div class="mb-4 flex items-end justify-between gap-4">
+			<div>
+				<p class="text-sm font-semibold text-emerald-400">League roster</p>
+				<h2 class="text-2xl font-bold text-white">Players</h2>
+			</div>
+			<span class="text-sm text-slate-500">{ fmt.Sprintf("%d total", len(players)) }</span>
+		</div>
+		if len(players) == 0 {
+			<div class="rounded-2xl border border-dashed border-slate-700 px-5 py-10 text-center">
+				<p class="font-medium text-slate-300">No players yet</p>
+				<p class="mt-1 text-sm text-slate-500">Add your first player above.</p>
+			</div>
+		} else {
+			<ul class="space-y-3">
+				for _, player := range players {
+					<li class="flex items-center gap-3 rounded-2xl border border-slate-800 bg-slate-900 p-4 shadow-sm">
+						<div class="flex size-11 shrink-0 items-center justify-center rounded-full bg-emerald-400/10 font-bold text-emerald-400">
+							{ string([]rune(player.Name)[0]) }
+						</div>
+						<div class="min-w-0 flex-1">
+							<p class="truncate font-semibold text-white">{ player.Name }</p>
+							<p class="text-sm text-slate-400">Rating { fmt.Sprintf("%d", player.Rating) }</p>
+						</div>
+						<button
+							type="button"
+							class="rounded-xl px-3 py-2 text-sm font-medium text-slate-400 transition hover:bg-red-500/10 hover:text-red-400 focus:outline-none focus:ring-2 focus:ring-red-400"
+							hx-delete={ fmt.Sprintf("/players/%d", player.ID) }
+							hx-target="#player-list"
+							hx-swap="outerHTML"
+							hx-confirm="Delete this player?"
+						>
+							Delete
+						</button>
+					</li>
+				}
+			</ul>
 		}
-	</ul>
+	</div>
 }
 
 templ PlayerFormError(message string) {
-	<span>{ message }</span>
+	<span class="text-sm font-medium text-red-400">{ message }</span>
 }
 
 templ Home(players []Player) {
 	<!DOCTYPE html>
 	<html lang="en">
 		<head>
-			<script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.11/dist/htmx.min.js"></script>
 			<meta charset="UTF-8"/>
+			<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 			<title>GICKR</title>
+			<link rel="stylesheet" href="/static/output.css"/>
+			<script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.11/dist/htmx.min.js"></script>
 		</head>
-		<body>
-			<h1>GICKR</h1>
-			<form
-				method="POST"
-				action="/players"
-				hx-post="/players"
-				hx-target="#player-list"
-				hx-swap="outerHTML"
-				hx-on::before-request="document.getElementById('player-form-error').textContent = ''"
-				hx-on::after-request="if (event.detail.xhr.getResponseHeader('X-Player-Added') === 'true') this.reset()"
-			>
-				<label for="name">Player name</label>
-				<input id="name" name="name" type="text" required/>
-				<button type="submit">Add player</button>
-				<div id="player-form-error" role="alert" aria-live="polite"></div>
-			</form>
-			@PlayerList(players)
+		<body class="min-h-screen bg-slate-950 text-slate-100 antialiased">
+			<main class="mx-auto w-full max-w-lg px-4 py-8 sm:py-12">
+				<header class="mb-8">
+					<p class="mb-2 text-sm font-bold uppercase tracking-[0.2em] text-emerald-400">Kicker league</p>
+					<h1 class="text-4xl font-black tracking-tight text-white">GICKR</h1>
+					<p class="mt-2 text-slate-400">Build your league, track ratings, and find balanced matches.</p>
+				</header>
+				<section class="mb-8 rounded-3xl border border-slate-800 bg-slate-900/70 p-5 shadow-xl shadow-black/10">
+					<h2 class="text-lg font-bold text-white">Add a player</h2>
+					<p class="mt-1 text-sm text-slate-400">Every new player starts with a 1000 rating.</p>
+					<form
+						class="mt-5"
+						method="POST"
+						action="/players"
+						hx-post="/players"
+						hx-target="#player-list"
+						hx-swap="outerHTML"
+						hx-on::before-request="document.getElementById('player-form-error').textContent = ''"
+						hx-on::after-request="if (event.detail.xhr.getResponseHeader('X-Player-Added') === 'true') this.reset()"
+					>
+						<label for="name" class="sr-only">Player name</label>
+						<div class="flex flex-col gap-3 sm:flex-row">
+							<input
+								id="name"
+								name="name"
+								type="text"
+								class="min-w-0 flex-1 rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none transition placeholder:text-slate-600 focus:border-emerald-400 focus:ring-2 focus:ring-emerald-400/20"
+								placeholder="Player name"
+								autocomplete="off"
+								required
+							/>
+							<button type="submit" class="rounded-xl bg-emerald-400 px-5 py-3 font-bold text-slate-950 transition hover:bg-emerald-300 focus:outline-none focus:ring-2 focus:ring-emerald-300 focus:ring-offset-2 focus:ring-offset-slate-900">
+								Add player
+							</button>
+						</div>
+						<div id="player-form-error" class="mt-2 min-h-5" role="alert" aria-live="polite"></div>
+					</form>
+				</section>
+				<section>
+					@PlayerList(players)
+				</section>
+			</main>
 		</body>
 	</html>
 }
