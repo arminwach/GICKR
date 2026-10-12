@@ -34,6 +34,14 @@ func main() {
 			Rating: 1000,
 		})
 
+		if r.Header.Get("HX-Request") == "true" {
+			err := PlayerList(players).Render(r.Context(), w)
+			if err != nil {
+				http.Error(w, "Could not render player list", http.StatusInternalServerError)
+			}
+			return
+		}
+
 		http.Redirect(w, r, "/", http.StatusSeeOther)
 	})
 

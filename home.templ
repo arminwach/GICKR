@@ -5,25 +5,36 @@ import (
 
 )
 
+templ PlayerList(players []Player) {
+    <ul id="player-list">
+        for _, player := range players {
+            <li>{ player.Name } — { fmt.Sprintf("%d", player.Rating) }</li>
+        }
+    </ul>
+}
+
 templ Home(players []Player){
     <!DOCTYPE html>
     <html lang="en">
         <head>
+        <script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.11/dist/htmx.min.js"></script>
             <meta charset="UTF-8"/>
             <title>GICKR</title>
         </head>
         <body>
             <h1>GICKR</h1>
-            <ul>
-                <form method="POST" action="/players">
-                    <label for="name">Player name</label>
-                    <input id="name" name="name" type="text" required/>
-                    <button type="submit">Add player</button>
-                </form>
-                for _, player := range players {
-                <li>{ player.Name } — { fmt.Sprintf("%d", player.Rating) }</li>
-                }
-            </ul>
+            <form
+                method="POST"
+                action="/players"
+                hx-post="/players"
+                hx-target="#player-list"
+                hx-swap="outerHTML"
+            >
+                <label for="name">Player name</label>
+                <input id="name" name="name" type="text" required/>
+                <button type="submit">Add player</button>
+            </form>
+            @PlayerList(players)
         </body>
     </html>
 }
