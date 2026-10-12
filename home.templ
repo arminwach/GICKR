@@ -29,6 +29,7 @@ templ Home(players []Player){
                 hx-post="/players"
                 hx-target="#player-list"
                 hx-swap="outerHTML"
+                hx-on::after-request="if (event.detail.successful) this.reset()"
             >
                 <label for="name">Player name</label>
                 <input id="name" name="name" type="text" required/>

@@ -98,7 +98,7 @@ func Home(players []Player) templ.Component {
 			templ_7745c5c3_Var4 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "<!doctype html><html lang=\"en\"><head><script src=\"https://cdn.jsdelivr.net/npm/htmx.org@2.0.11/dist/htmx.min.js\"></script><meta charset=\"UTF-8\"><title>GICKR</title></head><body><h1>GICKR</h1><form method=\"POST\" action=\"/players\" hx-post=\"/players\" hx-target=\"#player-list\" hx-swap=\"outerHTML\"><label for=\"name\">Player name</label> <input id=\"name\" name=\"name\" type=\"text\" required> <button type=\"submit\">Add player</button></form>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "<!doctype html><html lang=\"en\"><head><script src=\"https://cdn.jsdelivr.net/npm/htmx.org@2.0.11/dist/htmx.min.js\"></script><meta charset=\"UTF-8\"><title>GICKR</title></head><body><h1>GICKR</h1><form method=\"POST\" action=\"/players\" hx-post=\"/players\" hx-target=\"#player-list\" hx-swap=\"outerHTML\" hx-on::after-request=\"if (event.detail.successful) this.reset()\"><label for=\"name\">Player name</label> <input id=\"name\" name=\"name\" type=\"text\" required> <button type=\"submit\">Add player</button></form>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
