@@ -15,6 +15,11 @@ templ Home(players []Player){
         <body>
             <h1>GICKR</h1>
             <ul>
+                <form method="POST" action="/players">
+                    <label for="name">Player name</label>
+                    <input id="name" name="name" type="text" required/>
+                    <button type="submit">Add player</button>
+                </form>
                 for _, player := range players {
                 <li>{ player.Name } — { fmt.Sprintf("%d", player.Rating) }</li>
                 }
