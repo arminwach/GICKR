@@ -19,6 +19,19 @@ func playerExists(players []Player, name string) bool {
 	return false
 }
 
+func renderPlayerFormError(w http.ResponseWriter, r *http.Request, message string) {
+	if r.Header.Get("HX-Request") != "true" {
+		http.Error(w, message, http.StatusUnprocessableEntity)
+		return
+	}
+
+	w.Header().Set("HX-Retarget", "#player-form-error")
+	w.Header().Set("HX-Reswap", "innerHTML")
+	if err := PlayerFormError(message).Render(r.Context(), w); err != nil {
+		log.Printf("render player form error: %v", err)
+	}
+}
+
 func main() {
 
 	db, err := sql.Open("sqlite", "gickr.db")
@@ -51,12 +64,12 @@ func main() {
 		name := strings.TrimSpace(r.FormValue("name"))
 
 		if name == "" {
-			http.Error(w, "Player name is required", http.StatusBadRequest)
+			renderPlayerFormError(w, r, "Player name is required")
 			return
 		}
 
 		if playerExists(players, name) {
-			http.Error(w, "Player already exists", http.StatusConflict)
+			renderPlayerFormError(w, r, "Player already exists")
 			return
 		}
 
@@ -73,6 +86,7 @@ func main() {
 		players = append(players, player)
 
 		if r.Header.Get("HX-Request") == "true" {
+			w.Header().Set("X-Player-Added", "true")
 			err := PlayerList(players).Render(r.Context(), w)
 			if err != nil {
 				http.Error(w, "Could not render player list", http.StatusInternalServerError)
