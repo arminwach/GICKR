@@ -9,11 +9,6 @@ import (
 	_ "modernc.org/sqlite"
 )
 
-type Player struct {
-	Name   string
-	Rating int
-}
-
 func playerExists(players []Player, name string) bool {
 	for _, player := range players {
 		if strings.EqualFold(player.Name, name) {
@@ -24,36 +19,6 @@ func playerExists(players []Player, name string) bool {
 	return false
 }
 
-func loadPlayers(db *sql.DB) ([]Player, error) {
-	rows, err := db.Query(`
-		SELECT name, rating
-		FROM players
-		ORDER BY name
-	`)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var players []Player
-
-	for rows.Next() {
-		var player Player
-
-		if err := rows.Scan(&player.Name, &player.Rating); err != nil {
-			return nil, err
-		}
-
-		players = append(players, player)
-	}
-
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-
-	return players, nil
-}
-
 func main() {
 
 	db, err := sql.Open("sqlite", "gickr.db")
@@ -62,18 +27,13 @@ func main() {
 	}
 	defer db.Close()
 
-	_, err = db.Exec(`
-		CREATE TABLE IF NOT EXISTS players (
-			id INTEGER PRIMARY KEY,
-			name TEXT NOT NULL UNIQUE,
-			rating INTEGER NOT NULL DEFAULT 1000
-		)
-	`)
-	if err != nil {
+	store := newStore(db)
+
+	if err := store.createTables(); err != nil {
 		log.Fatal(err)
 	}
 
-	players, err := loadPlayers(db)
+	players, err := store.loadPlayers()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -100,20 +60,17 @@ func main() {
 			return
 		}
 
-		_, err := db.ExecContext(
-			r.Context(),
-			"INSERT INTO players (name, rating) VALUES (?, ?)",
-			name,
-			1000,
-		)
-		if err != nil {
+		player := Player{
+			Name:   name,
+			Rating: 1000,
+		}
+
+		if err := store.addPlayer(r.Context(), player); err != nil {
 			http.Error(w, "Could not save player", http.StatusInternalServerError)
 			return
 		}
-		players = append(players, Player{
-			Name:   name,
-			Rating: 1000,
-		})
+
+		players = append(players, player)
 
 		if r.Header.Get("HX-Request") == "true" {
 			err := PlayerList(players).Render(r.Context(), w)
