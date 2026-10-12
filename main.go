@@ -2,8 +2,10 @@ package main
 
 import (
 	"database/sql"
+	"errors"
 	"log"
 	"net/http"
+	"strconv"
 	"strings"
 
 	_ "modernc.org/sqlite"
@@ -78,7 +80,8 @@ func main() {
 			Rating: 1000,
 		}
 
-		if err := store.addPlayer(r.Context(), player); err != nil {
+		player, err = store.addPlayer(r.Context(), player)
+		if err != nil {
 			http.Error(w, "Could not save player", http.StatusInternalServerError)
 			return
 		}
@@ -95,6 +98,34 @@ func main() {
 		}
 
 		http.Redirect(w, r, "/", http.StatusSeeOther)
+	})
+
+	mux.HandleFunc("DELETE /players/{id}", func(w http.ResponseWriter, r *http.Request) {
+		id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
+		if err != nil {
+			http.Error(w, "Invalid player ID", http.StatusBadRequest)
+			return
+		}
+
+		if err := store.deletePlayer(r.Context(), id); err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				http.Error(w, "Player not found", http.StatusNotFound)
+				return
+			}
+
+			http.Error(w, "Could not delete player", http.StatusInternalServerError)
+			return
+		}
+
+		players, err = store.loadPlayers()
+		if err != nil {
+			http.Error(w, "Could not load players", http.StatusInternalServerError)
+			return
+		}
+
+		if err := PlayerList(players).Render(r.Context(), w); err != nil {
+			http.Error(w, "Could not render player list", http.StatusInternalServerError)
+		}
 	})
 
 	log.Fatal(http.ListenAndServe(":8080", mux))

@@ -5,7 +5,18 @@ import "fmt"
 templ PlayerList(players []Player) {
 	<ul id="player-list">
 		for _, player := range players {
-			<li>{ player.Name } — { fmt.Sprintf("%d", player.Rating) }</li>
+			<li>
+                { player.Name } — { fmt.Sprintf("%d", player.Rating) }
+                <button
+                    type="button"
+                    hx-delete={ fmt.Sprintf("/players/%d", player.ID) }
+                    hx-target="#player-list"
+                    hx-swap="outerHTML"
+                    hx-confirm="Delete this player?"
+                >
+                    Delete
+                </button>
+            </li>
 		}
 	</ul>
 }
