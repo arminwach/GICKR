@@ -1,6 +1,11 @@
 package main
 
-templ Home() {
+import (
+"fmt"
+
+)
+
+templ Home(players []Player){
     <!DOCTYPE html>
     <html lang="en">
         <head>
@@ -9,6 +14,11 @@ templ Home() {
         </head>
         <body>
             <h1>GICKR</h1>
+            <ul>
+                for _, player := range players {
+                <li>{ player.Name } — { fmt.Sprintf("%d", player.Rating) }</li>
+                }
+            </ul>
         </body>
     </html>
 }
